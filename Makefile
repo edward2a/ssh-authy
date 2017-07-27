@@ -11,3 +11,11 @@ multi_arch:
 	strip ${code}
 	strip ${code}.osx
 	strip ${code}.exe
+
+clean:
+	rm -f ${code}
+
+cleanall:
+	rm -f ${code}
+	rm -f ${code}.osx
+	rm -f ${code}.exe
