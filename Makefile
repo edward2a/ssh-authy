@@ -1,4 +1,4 @@
-code = ssh_authy
+code = ssh-authy
 
 all:
 	go build ${code}.go
