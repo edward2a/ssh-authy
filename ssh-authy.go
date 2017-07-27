@@ -4,6 +4,7 @@ import (
   "fmt"
   "io/ioutil"
   "log"
+  "log/syslog"
   "net/http"
   "os"
   "strings"
@@ -20,6 +21,7 @@ var bucket = "my-test-bucket-asdf"
 var project_base_path = "projects"
 var user_base_path = "users"
 var user_data_url = "http://169.254.169.254/latest/user-data"
+var syslog_writer *syslog.Writer
 
 var allowed_users = map[string]bool {
   "ec2-user": true,
@@ -31,6 +33,12 @@ type platform struct {
   Environment string
 }
 
+func config_logger() {
+  syslog_writer, err := syslog.New(syslog.LOG_AUTH, "ssh-authy")
+  if err != nil { os.Exit(2) }
+  log.SetOutput(syslog_writer)
+  log.SetFlags(0)
+}
 
 func validate_input() {
   if len(os.Args) == 2 {
@@ -126,6 +134,7 @@ func get_keys(bkt string, path string, users []string, client *s3.S3) [][]byte {
 
 
 func main() {
+  config_logger()
   validate_input()
   s3_client := get_client()
   project_data := get_project_info()
