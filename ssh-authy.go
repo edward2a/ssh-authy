@@ -42,9 +42,9 @@ func config_logger() {
 
 func validate_input() {
   if len(os.Args) == 2 {
-    if allowed_users[os.Args[1]] { ; } else { os.Exit(1) }
+    if allowed_users[os.Args[1]] { ; } else { log.Fatal("Username not allowed for lookup") }
   } else {
-    os.Exit(1)
+    log.Fatal("Missing username")
   }
 }
 
@@ -56,7 +56,7 @@ func get_project_info() platform {
   var prj string
   var env string
 
-  client :=  &http.Client{ Timeout: time.Second * 5 }
+  client :=  &http.Client{ Timeout: time.Second * 2 }
   req, _ := http.NewRequest("GET", user_data_url, nil)
 
   resp, err := client.Do(req)
