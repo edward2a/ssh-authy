@@ -91,12 +91,12 @@ func get_project_info() platform {
 }
 
 // Instantiate an S3 client
-func get_client() *s3.S3 {
+func get_client(region string) *s3.S3 {
 
   // Need to add region!
   aws_session := session.Must(
-    session.NewSessionWithOptions(
-      session.Options{ SharedConfigState: session.SharedConfigEnable } ) )
+    session.NewSession(&aws.Config{
+      Region: aws.String(region) } ) )
 
   s3_client := s3.New(aws_session)
   return s3_client
@@ -149,8 +149,8 @@ func get_keys(bkt string, path string, users []string, client *s3.S3) [][]byte {
 func main() {
   config_logger()
   validate_input()
-  s3_client := get_client()
   project_data := get_project_info()
+  s3_client := get_client(project_data.Region)
   user_list := list_users(bucket, project_data, s3_client)
   creds_list := get_keys(bucket, user_base_path, user_list, s3_client)
   keys_list := make([]string, len(creds_list))
