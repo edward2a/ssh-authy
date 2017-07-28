@@ -1,6 +1,7 @@
 package main
 
 import (
+  "encoding/json"
   "fmt"
   "io/ioutil"
   "log"
@@ -21,6 +22,7 @@ var bucket = "my-test-bucket-asdf"
 var project_base_path = "projects"
 var user_base_path = "users"
 var user_data_url = "http://169.254.169.254/latest/user-data"
+var instance_id_url = "http://169.254.169.254/latest/dynamic/instance-identity/document"
 var syslog_writer *syslog.Writer
 
 var allowed_users = map[string]bool {
@@ -31,6 +33,7 @@ var allowed_users = map[string]bool {
 type platform struct {
   ProjectName string
   Environment string
+  Region string
 }
 
 func config_logger() {
@@ -55,14 +58,17 @@ func get_project_info() platform {
 
   var prj string
   var env string
+  var idoc map[string]interface{}
 
   client :=  &http.Client{ Timeout: time.Second * 2 }
-  req, _ := http.NewRequest("GET", user_data_url, nil)
+  udata_req, _ := http.NewRequest("GET", user_data_url, nil)
+  idoc_req, _ := http.NewRequest("GET", instance_id_url, nil)
 
-  resp, err := client.Do(req)
+  // user-data
+  udata_resp, err := client.Do(udata_req)
   if err != nil { log.Fatal("Failed to retrieve platform info") }
-  defer resp.Body.Close()
-  body, err := ioutil.ReadAll(resp.Body)
+  defer udata_resp.Body.Close()
+  body, err := ioutil.ReadAll(udata_resp.Body)
   if err != nil { log.Fatal("Failed parsing platform info") }
 
   vars := strings.Split(string(body), "\n")
@@ -74,7 +80,14 @@ func get_project_info() platform {
     }
   }
 
-  return platform{prj, env}
+  // instance identity doc
+  idoc_resp, err := client.Do(idoc_req)
+  if err != nil { log.Fatal("Failed to retrieve platform identity document") }
+  defer idoc_resp.Body.Close()
+  idoc_dec := json.NewDecoder(idoc_resp.Body)
+  idoc_dec.Decode(&idoc)
+
+  return platform{prj, env, idoc["region"].(string)}
 }
 
 // Instantiate an S3 client
