@@ -24,6 +24,8 @@ var user_base_path = "users"
 var user_data_url = "http://169.254.169.254/latest/user-data"
 var instance_id_url = "http://169.254.169.254/latest/dynamic/instance-identity/document"
 var syslog_writer *syslog.Writer
+var proj_id_field = "ProjectName="
+var env_id_field = "Environment="
 
 var allowed_users = map[string]bool {
   "ec2-user": true,
@@ -73,10 +75,10 @@ func get_project_info() platform {
 
   vars := strings.Split(string(body), "\n")
   for i:=0; i < len(vars); i++ {
-    if strings.HasPrefix(vars[i], "ProjectName=") {
-      prj = strings.TrimPrefix(vars[i], "ProjectName=")
-    } else if strings.HasPrefix(vars[i], "Environment=") {
-      env = strings.TrimPrefix(vars[i], "Environment=")
+    if strings.HasPrefix(vars[i], proj_id_field) {
+      prj = strings.TrimPrefix(vars[i], proj_id_field)
+    } else if strings.HasPrefix(vars[i], proj_id_field) {
+      env = strings.TrimPrefix(vars[i], proj_id_field)
     }
   }
 
