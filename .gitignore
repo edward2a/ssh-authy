@@ -1,6 +1,11 @@
 # Vim
 *.swp
 
+# Compiled binaries according to Makefile
+ssh-authy
+ssh-authy.osx
+ssh-authy.exe
+
 # Binaries for programs and plugins
 *.exe
 *.dll
