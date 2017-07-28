@@ -1,0 +1,152 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: An S3 Bucket and related access policies for the storage of access and credentials of ssh-authy
+
+
+Parameters:
+
+  BaseName:
+    Type: String
+    Default: ssh-authy
+    Description: The base name to use for creating resources
+
+  TopicSubscription:
+    Type: String
+    Default: None
+    Description: Single email address as an initial subscription for the SNS topic
+
+
+Conditions:
+
+  Subscriber: !Not [!Equals [!Ref TopicSubscription, None]]
+
+
+Resources:
+
+  SshAuthyNotifications:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub '${BaseName}-notifications'
+      TopicName: !Sub '${BaseName}-notifications'
+      Subscription:
+        - !If
+          - Subscriber
+          - Endpoint: !Ref TopicSubscription
+            Protocol: email
+          - !Ref AWS::NoValue
+
+  SshAuthyNotificationsPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+      - !Ref SshAuthyNotifications
+      PolicyDocument:
+        Id: SshAuthyNotificationPolicy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: AllowSshAuthyBucketEvents
+          Principal: '*'
+          Effect: Allow
+          Action: 'sns:Publish'
+          Resource: !Ref SshAuthyNotifications
+          Condition:
+            ArnLike:
+              'aws:SourceArn': !Sub 'arn:aws:s3:::${BaseName}-${AWS::Region}-${AWS::AccountId}'
+
+  SshAuthyStore:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub '${BaseName}-${AWS::Region}-${AWS::AccountId}'
+      AccessControl: Private
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+        - Id: Remove user keys older than 90 days, versions 10 days after
+          Prefix: users/
+          ExpirationInDays: 90
+          NoncurrentVersionExpirationInDays: 10
+          Status: Enabled
+      NotificationConfiguration:
+        TopicConfigurations:
+        - Topic: !Ref SshAuthyNotifications
+          Event: 's3:ObjectCreated:*'
+        - Topic: !Ref SshAuthyNotifications
+          Event: 's3:ObjectRemoved:*'
+
+  SshAuthyStorePolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SshAuthyStore
+      PolicyDocument:
+        Id: SshAuthyStorePolicy
+        Version: '2012-10-17'
+        Statement:
+        - Sid: BucketApiRestrict
+          Principal: '*'
+          Effect: Deny
+          NotAction:
+          - s3:GetObject
+          - s3:ListBucket
+          - s3:PutObject
+          - s3:PutObjectAcl
+          Resource:
+          - !Sub 'arn:aws:s3:::${SshAuthyStore}'
+          - !Sub 'arn:aws:s3:::${SshAuthyStore}/*'
+          Condition:
+            BoolIfExists:
+              'aws:MultiFactorAuthPresent': false
+        - Sid: BucketApiAllow
+          Principal:
+            AWS:
+            - !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Effect: Allow
+          NotAction:
+          - s3:GetObject
+          - s3:ListBucket
+          Resource:
+          - !Sub 'arn:aws:s3:::${SshAuthyStore}'
+          - !Sub 'arn:aws:s3:::${SshAuthyStore}/*'
+          Condition:
+            BoolIfExists:
+              'aws:MultiFactorAuthAge': true
+              'aws:MultiFactorAuthPresent': true
+            NumericLessThan:
+              'aws:MultiFactorAuthAge': 1200
+        - Sid: SelfListProjectsAndUsers
+          Principal:
+            AWS:
+            - !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Effect: Allow
+          Action:
+          - s3:ListBucket
+          Resource:
+          - !Sub 'arn:aws:s3:::${SshAuthyStore}'
+          Condition:
+            StringEquals:
+              's3:delimiter': /
+            StringLike:
+              's3:prefix':
+              - projects/*
+              - users/*
+        - Sid: SelfGetProjectsAndUsers
+          Principal:
+            AWS:
+            - !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Effect: Allow
+          Action:
+          - s3:GetObject
+          Resource:
+          - !Sub 'arn:aws:s3:::${SshAuthyStore}/users/*'
+          - !Sub 'arn:aws:s3:::${SshAuthyStore}/projects/*'
+
+
+Outputs:
+
+  S3Bucket:
+    Value: !Ref SshAuthyStore
+
+  NotificationTopicArn:
+    Value: !Ref SshAuthyNotifications
+...
