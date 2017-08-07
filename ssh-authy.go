@@ -77,8 +77,8 @@ func get_project_info() platform {
   for i:=0; i < len(vars); i++ {
     if strings.HasPrefix(vars[i], proj_id_field) {
       prj = strings.TrimPrefix(vars[i], proj_id_field)
-    } else if strings.HasPrefix(vars[i], proj_id_field) {
-      env = strings.TrimPrefix(vars[i], proj_id_field)
+    } else if strings.HasPrefix(vars[i], env_id_field) {
+      env = strings.TrimPrefix(vars[i], env_id_field)
     }
   }
 
