@@ -1,0 +1,2 @@
+- Add config from file
+- Add caching to avoid unnecessary requests in a short period
