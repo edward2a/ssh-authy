@@ -112,6 +112,7 @@ func list_users(bkt string, path platform, client *s3.S3) []string {
   resp, err := client.ListObjects(&s3.ListObjectsInput{
     Bucket: aws.String(bkt),
     Prefix: aws.String(prefix),
+    Delimiter: aws.String("/"),
   } )
   if err != nil { log.Fatal(err.Error()) }
 
